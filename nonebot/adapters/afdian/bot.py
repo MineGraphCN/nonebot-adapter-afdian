@@ -41,6 +41,26 @@ class Bot(BaseBot):
         **kwargs,
     ) -> Any: ...
 
+    async def query_creator_plans(
+        self, user_id: str | None = None
+    ) -> CreatorPlansResponse:
+        """查询创作者的所有方案
+
+        .. attention::
+
+            非官方接口（/api/creator/get-plans），不在爱发电开放平台文档内，
+            无需 token 签名，仅能获取已上架的公开方案。字段结构可能随平台前端调整而变化。
+
+        :param user_id: 创作者用户 id，默认为当前 Bot 配置的 user_id
+        """
+        request = Request(
+            "GET",
+            url=self.adapter.afdian_config.afdian_api_base + "/api/creator/get-plans",
+            params={"user_id": user_id or self.self_id},
+        )
+        response = await self.adapter.request(request)
+        return parse_response(response, CreatorPlansResponse)
+
 
 class HookBot(Bot): ...
 
@@ -194,23 +214,3 @@ class TokenBot(HookBot):
         )
         response = await self.adapter.request(request)
         return parse_response(response, PlanResponse)
-
-    async def query_creator_plans(
-        self, user_id: str | None = None
-    ) -> CreatorPlansResponse:
-        """查询创作者的所有方案
-
-        .. attention::
-
-            非官方接口（afdian.com/api/creator/get-plans），不在爱发电开放平台文档内，
-            无需 token 签名，仅能获取已上架的公开方案。字段结构可能随平台前端调整而变化。
-
-        :param user_id: 创作者用户 id，默认为当前 Bot 配置的 user_id
-        """
-        request = Request(
-            "GET",
-            url="https://afdian.com/api/creator/get-plans",
-            params={"user_id": user_id or self.self_id},
-        )
-        response = await self.adapter.request(request)
-        return parse_response(response, CreatorPlansResponse)

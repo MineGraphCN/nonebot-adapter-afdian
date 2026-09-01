@@ -5,7 +5,7 @@ from nonebug import App
 import pytest
 
 from nonebot import get_adapter
-from nonebot.adapters.afdian import Adapter, TokenBot
+from nonebot.adapters.afdian import Adapter, HookBot, TokenBot
 from nonebot.adapters.afdian.exception import ApiNotAvailable
 from nonebot.adapters.afdian.payload import PlanResponse
 
@@ -114,6 +114,32 @@ async def test_query_creator_plans(app: App, monkeypatch):
     # 指定其他用户
     await bot.query_creator_plans("someone-else")
     assert "user_id=someone-else" in captured["url"]
+
+
+@pytest.mark.asyncio
+async def test_query_creator_plans_hook_bot(app: App, monkeypatch):
+    """HookBot（无 token）也可以调用 query_creator_plans，且 URL 走 api_base 配置"""
+    adapter = get_adapter(Adapter)
+    bot = HookBot(adapter, self_id="hook-only")
+
+    captured: dict = {}
+
+    async def fake_request(request):
+        from nonebot.drivers import Response
+
+        captured["url"] = str(request.url)
+        return Response(
+            200,
+            content='{"ec":200,"em":"","data":{"list":[]}}',
+        )
+
+    monkeypatch.setattr(adapter, "request", fake_request)
+
+    resp = await bot.query_creator_plans()
+    assert resp.ec == 200
+    assert "user_id=hook-only" in captured["url"]
+    # URL 应基于 afdian_api_base 配置构建
+    assert captured["url"].startswith(adapter.afdian_config.afdian_api_base)
 
 
 @pytest.mark.asyncio
