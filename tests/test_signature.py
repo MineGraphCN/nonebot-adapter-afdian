@@ -82,6 +82,30 @@ def test_verify_sign_empty(order):
     assert not verify_webhook_sign(order)
 
 
+def test_verify_sign_invalid_pem(order):
+    order.sign = "whatever"
+    # 格式错误的 PEM
+    assert not verify_webhook_sign(order, "not a pem key")
+
+
+def test_verify_sign_non_rsa_key(order, key_pair):
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    private_key, _ = key_pair
+    ec_pem = (
+        ec.generate_private_key(ec.SECP256R1())
+        .public_key()
+        .public_bytes(
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode()
+    )
+    order.sign = sign_order(private_key, order)
+    # 非 RSA 公钥应视为验证失败而非抛异常
+    assert not verify_webhook_sign(order, ec_pem)
+
+
 @pytest.mark.asyncio
 async def test_webhook_sign_valid(app: App, key_pair, monkeypatch):
     private_key, public_pem = key_pair

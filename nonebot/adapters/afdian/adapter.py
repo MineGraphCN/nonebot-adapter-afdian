@@ -15,7 +15,15 @@ from .bot import Bot, HookBot, TokenBot
 from .config import BotInfo, Config
 from .event import OrderNotifyEvent
 from .exception import ActionFailed, ApiNotAvailable
-from .payload import OrderResponse, PingResponse
+from .payload import (
+    OrderResponse,
+    PingResponse,
+    PlanResponse,
+    RandomReplyResponse,
+    SendMsgResponse,
+    SponsorResponse,
+    UpdatePlanReplyResponse,
+)
 from .signature import AFDIAN_WEBHOOK_PUBLIC_KEY, verify_webhook_sign
 from .utils import construct_request, log, parse_response
 
@@ -225,17 +233,28 @@ class Adapter(BaseAdapter):
 
     @override
     async def _call_api(self, bot: Bot, api: str, **data: Any) -> Any:
-        if api not in (
-            "/api/open/ping",
-            "/api/open/query-order",
-            "/api/open/query-sponsor",
-            "/api/open/query-random-reply",
-            "/api/open/update-plan-reply",
-            "/api/open/send-msg",
-            "/api/open/query-plan",
-        ):
+        response_models = {
+            "/api/open/ping": PingResponse,
+            "/api/open/query-order": OrderResponse,
+            "/api/open/query-sponsor": SponsorResponse,
+            "/api/open/query-random-reply": RandomReplyResponse,
+            "/api/open/update-plan-reply": UpdatePlanReplyResponse,
+            "/api/open/send-msg": SendMsgResponse,
+            "/api/open/query-plan": PlanResponse,
+        }
+        if api not in response_models:
             log("ERROR", f"Unsupported api: {api}")
             raise ApiNotAvailable(api)
+        if not isinstance(bot, TokenBot):
+            raise ApiNotAvailable(api)
+        request = construct_request(
+            self.afdian_config.afdian_api_base + api,
+            bot.self_id,
+            bot.token,
+            params=data,
+        )
+        response = await self.request(request)
+        return parse_response(response, response_models[api])
 
     async def add_bot(self, bot_info: BotInfo) -> Bot | None:
         """

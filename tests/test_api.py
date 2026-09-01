@@ -6,6 +6,7 @@ import pytest
 
 from nonebot import get_adapter
 from nonebot.adapters.afdian import Adapter, TokenBot
+from nonebot.adapters.afdian.exception import ApiNotAvailable
 from nonebot.adapters.afdian.payload import PlanResponse
 
 
@@ -76,3 +77,28 @@ async def test_new_api_methods(app: App, monkeypatch):
     assert isinstance(resp, PlanResponse)
     assert resp.data.plan.product_type == 1
     assert resp.data.plan.skus[0].sku_id == "s1"
+
+
+@pytest.mark.asyncio
+async def test_call_api_dispatch(app: App, monkeypatch):
+    """通过通用 bot.call_api 调用 API 应实际发出请求并解析响应"""
+    adapter = get_adapter(Adapter)
+    bot = TokenBot(adapter, self_id="fake", token="test-token")
+
+    async def fake_request(request):
+        from nonebot.drivers import Response
+
+        return Response(
+            200,
+            content='{"ec":200,"em":"pong","data":{"list":[{"out_trade_no":"123","content":"999"}]}}',
+        )
+
+    monkeypatch.setattr(adapter, "request", fake_request)
+
+    resp = await bot.call_api("/api/open/query-random-reply", out_trade_no="123")
+    assert resp.ec == 200
+    assert resp.data.list[0].content == "999"
+
+    # 不支持的端点
+    with pytest.raises(ApiNotAvailable):
+        await bot.call_api("/api/open/unknown")

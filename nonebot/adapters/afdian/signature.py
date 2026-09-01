@@ -1,7 +1,7 @@
 import base64
 import binascii
 
-from cryptography.exceptions import InvalidSignature
+from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
@@ -46,6 +46,13 @@ def verify_webhook_sign(
             padding.PKCS1v15(),
             hashes.SHA256(),
         )
-    except (InvalidSignature, ValueError, binascii.Error):
+    except (
+        InvalidSignature,
+        UnsupportedAlgorithm,
+        TypeError,
+        ValueError,
+        binascii.Error,
+    ):
+        # 签名错误 / PEM 格式错误 / 不支持的算法 / 非 RSA 公钥，均视为验证失败
         return False
     return True
