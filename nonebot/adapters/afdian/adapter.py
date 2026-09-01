@@ -16,6 +16,7 @@ from .config import BotInfo, Config
 from .event import OrderNotifyEvent
 from .exception import ActionFailed, ApiNotAvailable
 from .payload import OrderResponse, PingResponse
+from .signature import AFDIAN_WEBHOOK_PUBLIC_KEY, verify_webhook_sign
 from .utils import construct_request, log, parse_response
 
 
@@ -124,6 +125,30 @@ class Adapter(BaseAdapter):
                 content='{"ec": 200, "em": "success"}',
             )
 
+        if event.data.order.sign:
+            # 2025-07-01 起 webhook 推送携带签名，优先使用本地 RSA 验签
+            public_key = (
+                self.afdian_config.afdian_webhook_public_key
+                or AFDIAN_WEBHOOK_PUBLIC_KEY
+            )
+            if not verify_webhook_sign(event.data.order, public_key):
+                log(
+                    "ERROR",
+                    f"Webhook sign verify <r>failed</r>: {event.data.order.out_trade_no}",
+                )
+                return Response(
+                    400,
+                    headers={"Content-Type": "application/json"},
+                    content='{"ec": 400, "em": "sign verify failed"}',
+                )
+            bot = cast(Bot, self.bots[user_id])
+            asyncio.create_task(bot.handle_event(event))
+            return Response(
+                200,
+                headers={"Content-Type": "application/json"},
+                content='{"ec": 200, "em": "success"}',
+            )
+
         if not token:
             # 如果没有token，则代表为HookBot，只接受Hook交给Bot处理，不做验证
             bot = cast(HookBot, self.bots[user_id])
@@ -134,7 +159,7 @@ class Adapter(BaseAdapter):
                 content='{"ec": 200, "em": "success"}',
             )
 
-        # 每当有订单时，平台会请求开发者配置的url（如果服务器异常，可能不保证能及时推送，因此建议结合API一起使用）
+        # 旧版推送无签名，回查订单接口验证（如果服务器异常，可能不保证能及时推送，因此建议结合API一起使用）
         verify_request = construct_request(
             self.afdian_config.afdian_api_base + "/api/open/query-order",
             user_id,
@@ -204,6 +229,10 @@ class Adapter(BaseAdapter):
             "/api/open/ping",
             "/api/open/query-order",
             "/api/open/query-sponsor",
+            "/api/open/query-random-reply",
+            "/api/open/update-plan-reply",
+            "/api/open/send-msg",
+            "/api/open/query-plan",
         ):
             log("ERROR", f"Unsupported api: {api}")
             raise ApiNotAvailable(api)
