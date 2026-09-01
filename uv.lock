@@ -926,7 +926,7 @@ wheels = [
 
 [[package]]
 name = "nonebot-adapter-afdian"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
@@ -1343,11 +1343,11 @@ wheels = [
 
 [[package]]
 name = "pygtrie"
-version = "2.5.0"
+version = "2.6.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b9/13/55deec25bf09383216fa7f1dfcdbfca40a04aa00b6d15a5cbf25af8fce5f/pygtrie-2.5.0.tar.gz", hash = "sha256:203514ad826eb403dab1d2e2ddd034e0d1534bbe4dbe0213bb0593f66beba4e2", size = 39266, upload-time = "2022-07-16T14:29:47.459Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/72/36/c606d5b15868a0dffdc874e42e466babf682507c15d678098f19708a2901/pygtrie-2.6.0.tar.gz", hash = "sha256:926f92b7fc5aa4f5f38c9227b1925603cd18891c45cabd01ae76b22d2446eabb", size = 56118, upload-time = "2026-09-01T11:06:09.683Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ec/cd/bd196b2cf014afb1009de8b0f05ecd54011d881944e62763f3c1b1e8ef37/pygtrie-2.5.0-py3-none-any.whl", hash = "sha256:8795cda8105493d5ae159a5bef313ff13156c5d4d72feddefacaad59f8c8ce16", size = 25099, upload-time = "2022-09-23T20:30:05.12Z" },
+    { url = "https://files.pythonhosted.org/packages/02/b6/c6ad9a277ffecf4d27fe9c212374f19cf3a7e7786b7fdeaded08b8f6b303/pygtrie-2.6.0-py3-none-any.whl", hash = "sha256:541d340d47c763b1c5e2b5019b0c22b351323d1b5f4fe834fa9af25bdf755eac", size = 31041, upload-time = "2026-09-01T11:06:08.283Z" },
 ]
 
 [[package]]

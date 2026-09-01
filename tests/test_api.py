@@ -80,6 +80,43 @@ async def test_new_api_methods(app: App, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_query_creator_plans(app: App, monkeypatch):
+    """query_creator_plans 应发送无签名 GET 请求并解析响应"""
+    adapter = get_adapter(Adapter)
+    bot = TokenBot(adapter, self_id="fake", token="test-token")
+
+    captured: dict = {}
+
+    async def fake_request(request):
+        from nonebot.drivers import Response
+
+        captured["method"] = request.method
+        captured["url"] = str(request.url)
+        return Response(
+            200,
+            content=(
+                '{"ec":200,"em":"","data":{"list":[{"plan_id":"p1",'
+                '"user_id":"fake","status":1,"name":"方案A","price":"5.00",'
+                '"product_type":0}]}}'
+            ),
+        )
+
+    monkeypatch.setattr(adapter, "request", fake_request)
+
+    # 默认使用 self_id
+    resp = await bot.query_creator_plans()
+    assert captured["method"] == "GET"
+    assert "creator/get-plans" in captured["url"]
+    assert "user_id=fake" in captured["url"]
+    assert resp.data.list[0].plan_id == "p1"
+    assert resp.data.list[0].name == "方案A"
+
+    # 指定其他用户
+    await bot.query_creator_plans("someone-else")
+    assert "user_id=someone-else" in captured["url"]
+
+
+@pytest.mark.asyncio
 async def test_call_api_dispatch(app: App, monkeypatch):
     """通过通用 bot.call_api 调用 API 应实际发出请求并解析响应"""
     adapter = get_adapter(Adapter)
