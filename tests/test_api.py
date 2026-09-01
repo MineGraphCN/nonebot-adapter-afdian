@@ -5,7 +5,7 @@ from nonebug import App
 import pytest
 
 from nonebot import get_adapter
-from nonebot.adapters.afdian import Adapter, TokenBot
+from nonebot.adapters.afdian import Adapter, HookBot, TokenBot
 from nonebot.adapters.afdian.exception import ApiNotAvailable
 from nonebot.adapters.afdian.payload import PlanResponse
 
@@ -77,6 +77,69 @@ async def test_new_api_methods(app: App, monkeypatch):
     assert isinstance(resp, PlanResponse)
     assert resp.data.plan.product_type == 1
     assert resp.data.plan.skus[0].sku_id == "s1"
+
+
+@pytest.mark.asyncio
+async def test_query_creator_plans(app: App, monkeypatch):
+    """query_creator_plans 应发送无签名 GET 请求并解析响应"""
+    adapter = get_adapter(Adapter)
+    bot = TokenBot(adapter, self_id="fake", token="test-token")
+
+    captured: dict = {}
+
+    async def fake_request(request):
+        from nonebot.drivers import Response
+
+        captured["method"] = request.method
+        captured["url"] = str(request.url)
+        return Response(
+            200,
+            content=(
+                '{"ec":200,"em":"","data":{"list":[{"plan_id":"p1",'
+                '"user_id":"fake","status":1,"name":"方案A","price":"5.00",'
+                '"product_type":0}]}}'
+            ),
+        )
+
+    monkeypatch.setattr(adapter, "request", fake_request)
+
+    # 默认使用 self_id
+    resp = await bot.query_creator_plans()
+    assert captured["method"] == "GET"
+    assert "creator/get-plans" in captured["url"]
+    assert "user_id=fake" in captured["url"]
+    assert resp.data.list[0].plan_id == "p1"
+    assert resp.data.list[0].name == "方案A"
+
+    # 指定其他用户
+    await bot.query_creator_plans("someone-else")
+    assert "user_id=someone-else" in captured["url"]
+
+
+@pytest.mark.asyncio
+async def test_query_creator_plans_hook_bot(app: App, monkeypatch):
+    """HookBot（无 token）也可以调用 query_creator_plans，且 URL 走 api_base 配置"""
+    adapter = get_adapter(Adapter)
+    bot = HookBot(adapter, self_id="hook-only")
+
+    captured: dict = {}
+
+    async def fake_request(request):
+        from nonebot.drivers import Response
+
+        captured["url"] = str(request.url)
+        return Response(
+            200,
+            content='{"ec":200,"em":"","data":{"list":[]}}',
+        )
+
+    monkeypatch.setattr(adapter, "request", fake_request)
+
+    resp = await bot.query_creator_plans()
+    assert resp.ec == 200
+    assert "user_id=hook-only" in captured["url"]
+    # URL 应基于 afdian_api_base 配置构建
+    assert captured["url"].startswith(adapter.afdian_config.afdian_api_base)
 
 
 @pytest.mark.asyncio

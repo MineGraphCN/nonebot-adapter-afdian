@@ -6,47 +6,47 @@
 
 1. 安装
 
-    ```shell
-    pip install nonebot-adapter-afdian
-    ```
+   ```shell
+   pip install nonebot-adapter-afdian
+   ```
 
 2. 启用
 
-    ```toml
-    adapters = [
-        { name = "Afdian", module_name = "nonebot.adapter.afdian" }
-    ]
-    ```
+   ```toml
+   adapters = [
+       { name = "Afdian", module_name = "nonebot.adapter.afdian" }
+   ]
+   ```
 
 3. 配置
 
-    - NoneBot2
+   - NoneBot2
 
-        ```dotenv
-        DRIVER=~fastapi+~httpx
-        HOST=0.0.0.0
-        AFDIAN_HOOK_SECRET='<Your Secret>'
-        AFDIAN_BOTS='[
-            {
-                "user_id": "<Your User Id>",
-                "token": "<Your Token>"
-            }
-        ]'
-        # 可选：Webhook 签名验证公钥（PEM），留空使用内置平台公钥
-        AFDIAN_WEBHOOK_PUBLIC_KEY=''
-        ```
+     ```dotenv
+     DRIVER=~fastapi+~httpx
+     HOST=0.0.0.0
+     AFDIAN_HOOK_SECRET='<Your Secret>'
+     AFDIAN_BOTS='[
+         {
+             "user_id": "<Your User Id>",
+             "token": "<Your Token>"
+         }
+     ]'
+     # 可选：Webhook 签名验证公钥（PEM），留空使用内置平台公钥
+     AFDIAN_WEBHOOK_PUBLIC_KEY=''
+     ```
 
-    - 爱发电开发者控制台
+   - 爱发电开发者控制台
 
-        ```shell
-        http://<IP>:<PORT>/afdian/webhooks/<user_id>
-        ```
+     ```shell
+     http://<IP>:<PORT>/afdian/webhooks/<user_id>
+     ```
 
-        or
+     or
 
-        ```shell
-        https://<IP>:<PORT>/afdian/<Your Secret>/webhooks/<user_id>
-        ```
+     ```shell
+     https://<IP>:<PORT>/afdian/<Your Secret>/webhooks/<user_id>
+     ```
 
 ## Webhook 签名验证
 
@@ -107,6 +107,11 @@ async def handle_afd(bot: Bot, event: OrderNotifyEvent):
     # 查看方案详情
     result9 = await bot.query_plan(plan_id="<Your Plan Id>")
     print(result9)
+
+    # 查询创作者的所有方案（非官方 Web API，无需签名，仅含已上架的公开方案）
+    result10 = await bot.query_creator_plans()  # 默认查询当前 Bot 的 user_id
+    result11 = await bot.query_creator_plans(user_id="<User Id>")  # 也可以查别人
+    print(result10, result11)
 ```
 
 ## 特别感谢

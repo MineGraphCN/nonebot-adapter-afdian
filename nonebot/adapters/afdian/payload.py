@@ -369,3 +369,59 @@ class PlanResponse(BaseAfdianResponse):
     """方案 Response"""
 
     data: PlanResponseData
+
+
+class CreatorPlan(BaseModel):
+    """创作者方案（非官方 Web API）
+
+    来自 afdian.com/api/creator/get-plans，非官方开放文档接口，字段以 web 前端实际返回为准
+    """
+
+    plan_id: str
+    """方案ID"""
+    user_id: str
+    """所属创作者用户ID"""
+    rank: int | None = None
+    """排序"""
+    status: int
+    """1-上架 其他-下架/隐藏"""
+    name: str
+    """方案名称"""
+    pic: str | None = None
+    """封面图"""
+    desc: str | None = None
+    """方案描述"""
+    price: str
+    """价格"""
+    show_price: str | None = None
+    """展示价格"""
+    update_time: int | None = None
+    """更新时间戳（秒）"""
+    pay_month: int | None = None
+    """1-月费，3-季费，12-年费"""
+    independent: int | None = None
+    """是否独立方案 0-非独立 1-独立"""
+    permanent: int | None = None
+    """是否永久方案 0-非永久 1-永久"""
+    product_type: int | None = None
+    """0-订阅 1-商品 2-捆绑包 3-自选包 4-售票"""
+    need_address: int | None = None
+    """是否需要收货地址 0-不需要 1-需要"""
+    sale_limit_count: int | None = None
+    """限购数量，-1 表示不限"""
+    can_buy_hide: int | None = None
+    """是否隐藏购买入口 0-否 1-是"""
+    sponsor_count: str | None = None
+    """赞助人数"""
+
+
+class CreatorPlansResponseData(NewApiData):
+    """创作者方案列表响应数据（非官方 Web API）"""
+
+    list: list[CreatorPlan]
+
+
+class CreatorPlansResponse(BaseAfdianResponse):
+    """创作者方案列表 Response（非官方 Web API）"""
+
+    data: CreatorPlansResponseData
