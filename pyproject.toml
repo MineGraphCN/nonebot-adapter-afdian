@@ -1,6 +1,6 @@
 [project]
 name = "nonebot-adapter-afdian"
-version = "0.1.8"
+version = "0.2.0"
 description = "爱发电适配器"
 authors = [{ name = "17TheWord", email = "17theword@gmail.com" }]
 requires-python = ">=3.10, <4"
@@ -9,6 +9,7 @@ license = "MIT"
 dependencies = [
     "pydantic>=1.10.0,<3.0.0,!=2.5.0,!=2.5.1",
     "nonebot2[fastapi, httpx]>=2.4.2,<3",
+    "cryptography>=43",
 ]
 
 [dependency-groups]

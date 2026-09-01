@@ -82,6 +82,12 @@ class SkuDetail(BaseModel):
     pic: str | None = None
     stock: str | int | None = None
     post_id: str | None = None
+    address_person: str | None = None
+    """收件人"""
+    address_phone: str | None = None
+    """收件人电话"""
+    address_address: str | None = None
+    """收件人地址"""
 
 
 class Order(BaseModel):
@@ -115,7 +121,7 @@ class Order(BaseModel):
     redeem_id: str | None = None
     """兑换码ID"""
     product_type: int
-    """0 表示常规方案，1 表示售卖方案"""
+    """0-订阅 1-商品 2-捆绑包 3-自选包 4-售票"""
     discount: str | None = None
     """折扣"""
     sku_detail: list[SkuDetail] | None = None
@@ -126,6 +132,8 @@ class Order(BaseModel):
     """收件人电话"""
     address_address: str | None = None
     """收件人地址"""
+    sign: str | None = None
+    """Webhook 签名，2025-07-01 后平台推送会携带，用于验证数据来源"""
 
 
 class WebhookData(BaseModel):
@@ -254,3 +262,110 @@ class SponsorResponse(BaseAfdianResponse):
     """赞助者 Response"""
 
     data: SponsorResponseData
+
+
+class RandomReply(BaseModel):
+    """随机自动回复"""
+
+    out_trade_no: str
+    """订单号"""
+    content: str
+    """随机自动回复内容"""
+
+
+class NewApiData(BaseModel):
+    """新接口响应数据基类（部分接口返回不含 request/分页字段）"""
+
+    request: Request | None = None
+
+
+class RandomReplyResponseData(NewApiData):
+    """随机自动回复响应数据"""
+
+    list: list[RandomReply]
+
+
+class RandomReplyResponse(BaseAfdianResponse):
+    """随机自动回复 Response"""
+
+    data: RandomReplyResponseData
+
+
+class UpdatePlanReplyResponseData(NewApiData):
+    """更新方案自动回复响应数据"""
+
+
+class UpdatePlanReplyResponse(BaseAfdianResponse):
+    """更新方案自动回复 Response"""
+
+    data: UpdatePlanReplyResponseData
+
+
+class SendMsgResponseData(NewApiData):
+    """发送私信响应数据"""
+
+
+class SendMsgResponse(BaseAfdianResponse):
+    """发送私信 Response"""
+
+    data: SendMsgResponseData
+
+
+class Sku(BaseModel):
+    """商品型号"""
+
+    sku_id: str
+    """型号ID"""
+    plan_id: str
+    """所属方案ID"""
+    name: str
+    """型号名称"""
+    desc: str | None = None
+    """型号描述"""
+    stock: str | None = None
+    """库存"""
+    price: str
+    """价格"""
+    reply_content: str | None = None
+    """自动回复内容"""
+    reply_random_content: str | None = None
+    """自动随机回复内容"""
+
+
+class Plan(BaseModel):
+    """方案详情"""
+
+    plan_id: str
+    """方案ID"""
+    price: str
+    """价格"""
+    name: str
+    """方案名称"""
+    product_type: int
+    """0-订阅 1-商品 2-捆绑包 3-自选包 4-售票"""
+    desc: str | None = None
+    """方案描述"""
+    reply_content: str | None = None
+    """自动回复内容"""
+    replay_random_content: str | None = None
+    """自动随机回复内容（注意：平台返回字段名即为 replay_random_content）"""
+    independent: int | None = None
+    """是否独立方案 0-非独立 1-独立"""
+    permanent: int | None = None
+    """是否永久方案 0-非永久 1-永久"""
+    pay_month: int | None = None
+    """1-月费，3-季费，12-年费"""
+    skus: list[Sku] | None = None
+    """型号列表，方案类型是订阅时不会有该字段"""
+
+
+class PlanResponseData(NewApiData):
+    """方案响应数据"""
+
+    plan: Plan
+
+
+class PlanResponse(BaseAfdianResponse):
+    """方案 Response"""
+
+    data: PlanResponseData

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 from typing_extensions import override
 
 from nonebot.adapters import Bot as BaseBot
@@ -6,7 +6,15 @@ from nonebot.message import handle_event
 
 from .event import Event
 from .message import Message, MessageSegment
-from .payload import OrderResponse, PingResponse, SponsorResponse
+from .payload import (
+    OrderResponse,
+    PingResponse,
+    PlanResponse,
+    RandomReplyResponse,
+    SendMsgResponse,
+    SponsorResponse,
+    UpdatePlanReplyResponse,
+)
 from .utils import construct_request, parse_response
 
 if TYPE_CHECKING:
@@ -90,3 +98,97 @@ class TokenBot(HookBot):
         )
         response = await self.adapter.request(request)
         return parse_response(response, SponsorResponse)
+
+    async def query_random_reply(
+        self, out_trade_no: str | list[str]
+    ) -> RandomReplyResponse:
+        """根据订单号查询随机自动回复
+
+        :param out_trade_no: 订单号，传列表可查询多个
+        """
+        if isinstance(out_trade_no, list):
+            if not out_trade_no:
+                raise ValueError("out_trade_no list must not be empty")
+            out_trade_no = ",".join(out_trade_no)
+        request = construct_request(
+            self.adapter.afdian_config.afdian_api_base + "/api/open/query-random-reply",
+            self.self_id,
+            self.token,
+            params={"out_trade_no": out_trade_no},
+        )
+        response = await self.adapter.request(request)
+        return parse_response(response, RandomReplyResponse)
+
+    async def update_plan_reply(
+        self,
+        *,
+        plan_id: str | None = None,
+        sku_id: str | None = None,
+        auto_reply: str | None = None,
+        auto_random_reply: str | None = None,
+        update_random_reply_type: Literal["append", "overwrite"] | None = None,
+    ) -> UpdatePlanReplyResponse:
+        """通过 API 填入自动回复（可用于补货、发码等场景）
+
+        :param plan_id: 方案 id，更新订阅方案时使用，与 sku_id 二选一
+        :param sku_id: 型号 id，更新商品时使用，与 plan_id 二选一
+        :param auto_reply: 自动回复内容，非空时覆盖原内容，不传或空串不更新
+        :param auto_random_reply: 自动随机回复内容，非空时才会更新
+        :param update_random_reply_type: 更新随机回复方式 append 追加 / overwrite 覆盖，
+            更新 auto_random_reply 时必填
+        """
+        if (plan_id is None) == (sku_id is None):
+            raise ValueError("plan_id and sku_id are mutually exclusive, pick one")
+        if auto_random_reply and update_random_reply_type is None:
+            raise ValueError(
+                "update_random_reply_type is required when updating auto_random_reply"
+            )
+        params: dict[str, Any] = {}
+        if plan_id is not None:
+            params["plan_id"] = plan_id
+        else:
+            params["sku_id"] = sku_id
+        if auto_reply:
+            params["auto_reply"] = auto_reply
+        if auto_random_reply:
+            params["auto_random_reply"] = auto_random_reply
+            params["update_random_reply_type"] = update_random_reply_type
+        request = construct_request(
+            self.adapter.afdian_config.afdian_api_base + "/api/open/update-plan-reply",
+            self.self_id,
+            self.token,
+            params=params,
+        )
+        response = await self.adapter.request(request)
+        return parse_response(response, UpdatePlanReplyResponse)
+
+    async def send_msg(self, recipient: str, content: str) -> SendMsgResponse:
+        """发送私信
+
+        平台频率限制：10 次/秒 和 1000 次/小时
+
+        :param recipient: 接收用户
+        :param content: 私信内容
+        """
+        request = construct_request(
+            self.adapter.afdian_config.afdian_api_base + "/api/open/send-msg",
+            self.self_id,
+            self.token,
+            params={"recipient": recipient, "content": content},
+        )
+        response = await self.adapter.request(request)
+        return parse_response(response, SendMsgResponse)
+
+    async def query_plan(self, plan_id: str) -> PlanResponse:
+        """查看方案详情
+
+        :param plan_id: 方案 id
+        """
+        request = construct_request(
+            self.adapter.afdian_config.afdian_api_base + "/api/open/query-plan",
+            self.self_id,
+            self.token,
+            params={"plan_id": plan_id},
+        )
+        response = await self.adapter.request(request)
+        return parse_response(response, PlanResponse)

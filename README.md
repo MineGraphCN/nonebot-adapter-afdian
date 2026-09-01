@@ -32,6 +32,8 @@
                 "token": "<Your Token>"
             }
         ]'
+        # 可选：Webhook 签名验证公钥（PEM），留空使用内置平台公钥
+        AFDIAN_WEBHOOK_PUBLIC_KEY=''
         ```
 
     - 爱发电开发者控制台
@@ -45,6 +47,12 @@
         ```shell
         https://<IP>:<PORT>/afdian/<Your Secret>/webhooks/<user_id>
         ```
+
+## Webhook 签名验证
+
+2025-07-01 起爱发电 Webhook 推送携带 `sign` 签名字段，适配器会使用内置平台公钥自动进行本地验签（RSA-SHA256），无需额外配置。
+
+如平台更换公钥，可通过 `AFDIAN_WEBHOOK_PUBLIC_KEY` 配置自定义 PEM 公钥覆盖。未携带签名的旧版推送仍走订单回查验证。
 
 ## API
 
@@ -77,6 +85,28 @@ async def handle_afd(bot: Bot, event: OrderNotifyEvent):
 
     result5 = await bot.query_sponsor(page=1, per_page=20) # 查询第一页，每页20个
     print(result5)
+
+    # 根据订单号查询随机自动回复
+    result6 = await bot.query_random_reply(
+        out_trade_no="202308200000000000000000001"
+        )
+    print(result6)
+
+    # 通过 API 填入自动回复（可用于补货、发码等场景）
+    result7 = await bot.update_plan_reply(
+        plan_id="<Your Plan Id>",  # 与 sku_id 二选一
+        auto_random_reply="<New Code>",
+        update_random_reply_type="overwrite",  # append 追加 / overwrite 覆盖
+        )
+    print(result7)
+
+    # 发送私信（平台限频 10 次/秒 和 1000 次/小时）
+    result8 = await bot.send_msg(recipient="<User Id>", content="<Content>")
+    print(result8)
+
+    # 查看方案详情
+    result9 = await bot.query_plan(plan_id="<Your Plan Id>")
+    print(result9)
 ```
 
 ## 特别感谢

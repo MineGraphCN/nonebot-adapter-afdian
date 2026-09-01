@@ -15,7 +15,16 @@ from .bot import Bot, HookBot, TokenBot
 from .config import BotInfo, Config
 from .event import OrderNotifyEvent
 from .exception import ActionFailed, ApiNotAvailable
-from .payload import OrderResponse, PingResponse
+from .payload import (
+    OrderResponse,
+    PingResponse,
+    PlanResponse,
+    RandomReplyResponse,
+    SendMsgResponse,
+    SponsorResponse,
+    UpdatePlanReplyResponse,
+)
+from .signature import AFDIAN_WEBHOOK_PUBLIC_KEY, verify_webhook_sign
 from .utils import construct_request, log, parse_response
 
 
@@ -124,6 +133,30 @@ class Adapter(BaseAdapter):
                 content='{"ec": 200, "em": "success"}',
             )
 
+        if event.data.order.sign:
+            # 2025-07-01 起 webhook 推送携带签名，优先使用本地 RSA 验签
+            public_key = (
+                self.afdian_config.afdian_webhook_public_key
+                or AFDIAN_WEBHOOK_PUBLIC_KEY
+            )
+            if not verify_webhook_sign(event.data.order, public_key):
+                log(
+                    "ERROR",
+                    f"Webhook sign verify <r>failed</r>: {event.data.order.out_trade_no}",
+                )
+                return Response(
+                    400,
+                    headers={"Content-Type": "application/json"},
+                    content='{"ec": 400, "em": "sign verify failed"}',
+                )
+            bot = cast(Bot, self.bots[user_id])
+            asyncio.create_task(bot.handle_event(event))
+            return Response(
+                200,
+                headers={"Content-Type": "application/json"},
+                content='{"ec": 200, "em": "success"}',
+            )
+
         if not token:
             # 如果没有token，则代表为HookBot，只接受Hook交给Bot处理，不做验证
             bot = cast(HookBot, self.bots[user_id])
@@ -134,7 +167,7 @@ class Adapter(BaseAdapter):
                 content='{"ec": 200, "em": "success"}',
             )
 
-        # 每当有订单时，平台会请求开发者配置的url（如果服务器异常，可能不保证能及时推送，因此建议结合API一起使用）
+        # 旧版推送无签名，回查订单接口验证（如果服务器异常，可能不保证能及时推送，因此建议结合API一起使用）
         verify_request = construct_request(
             self.afdian_config.afdian_api_base + "/api/open/query-order",
             user_id,
@@ -200,13 +233,28 @@ class Adapter(BaseAdapter):
 
     @override
     async def _call_api(self, bot: Bot, api: str, **data: Any) -> Any:
-        if api not in (
-            "/api/open/ping",
-            "/api/open/query-order",
-            "/api/open/query-sponsor",
-        ):
+        response_models = {
+            "/api/open/ping": PingResponse,
+            "/api/open/query-order": OrderResponse,
+            "/api/open/query-sponsor": SponsorResponse,
+            "/api/open/query-random-reply": RandomReplyResponse,
+            "/api/open/update-plan-reply": UpdatePlanReplyResponse,
+            "/api/open/send-msg": SendMsgResponse,
+            "/api/open/query-plan": PlanResponse,
+        }
+        if api not in response_models:
             log("ERROR", f"Unsupported api: {api}")
             raise ApiNotAvailable(api)
+        if not isinstance(bot, TokenBot):
+            raise ApiNotAvailable(api)
+        request = construct_request(
+            self.afdian_config.afdian_api_base + api,
+            bot.self_id,
+            bot.token,
+            params=data,
+        )
+        response = await self.request(request)
+        return parse_response(response, response_models[api])
 
     async def add_bot(self, bot_info: BotInfo) -> Bot | None:
         """
